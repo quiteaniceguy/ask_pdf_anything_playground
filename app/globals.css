@@ -20,14 +20,15 @@ body {
 
 .wordmark-letter {
   display: inline-block;
-  font-family: var(--font-bebas), sans-serif;
-  font-size: 1.5rem;
-  letter-spacing: 0.01em;
-  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease, text-shadow 0.2s ease;
+  font-family: var(--font-cormorant), serif;
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .wordmark-letter:hover {
-  transform: translateY(-5px);
-  text-shadow: 0 12px 8px rgba(0, 0, 0, 0.25);
+  transform: translateY(-3px);
+  opacity: 0.5;
 }
