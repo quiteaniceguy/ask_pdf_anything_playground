@@ -28,7 +28,7 @@ function DropZone({
       <div
         {...getRootProps()}
         data-testid={dataTestId}
-        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer w-full border-gray-300 hover:border-gray-400"
+        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer w-full h-48 flex flex-col items-center justify-center border-gray-300 hover:border-gray-400"
       >
         <input {...getInputProps()} />
         {isDragActive ? (
