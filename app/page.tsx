@@ -6,8 +6,8 @@ export default function Home() {
   return (
     <div>
       <Wordmark />
-      <h1 className="text-center text-4xl p-5">Background Remover</h1>
-      <p className="text-center p-5">Upload a photo of a person to extract them from the background</p>
+      <h1 className="text-center text-4xl p-5">Figure Drawing Review</h1>
+      <p className="text-center p-5">Upload your reference photo and your drawing to get feedback</p>
       <FileInput/>
       {/*
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
