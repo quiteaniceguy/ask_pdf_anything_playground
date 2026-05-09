@@ -12,15 +12,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.wordmark-letter {
+  display: inline-block;
+  font-family: var(--font-bebas), sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, text-shadow 0.2s ease;
+}
+
+.wordmark-letter:hover {
+  transform: translateY(-5px);
+  text-shadow: 0 12px 8px rgba(0, 0, 0, 0.25);
 }
