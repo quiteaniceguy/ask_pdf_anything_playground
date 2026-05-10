@@ -25,6 +25,8 @@ FINGERTIP_IDS = [4, 8, 12, 16, 20]   # thumb → pinky tips
 def build_hand_mask(img_rgb, h, w):
     """Convex-hull of each detected hand + extra blobs at fingertips."""
     mask = np.zeros((h, w), dtype=np.uint8)
+    if not hasattr(mp, "solutions"):
+        return mask
     with mp.solutions.hands.Hands(
         static_image_mode=True, max_num_hands=2, min_detection_confidence=0.25
     ) as det:
@@ -58,7 +60,7 @@ def build_foot_mask(pose_result, h, w, scale):
 
 def remove_background(input_path, output_path):
     # ── 1. BiRefNet portrait: state-of-the-art human cutout ──────────────────
-    session  = new_session("birefnet-portrait")
+    session  = new_session("birefnet-portrait", providers=["CPUExecutionProvider"])
     pil_in   = Image.open(input_path).convert("RGB")
     pil_out  = remove(pil_in, session=session).convert("RGBA")
 
