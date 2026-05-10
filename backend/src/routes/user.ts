@@ -1,18 +1,16 @@
 import { Hono } from "hono";
-import { createClerkClient } from "@clerk/backend";
+import type { AppVariables } from "../types.js";
 
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
-const router = new Hono();
+const router = new Hono<{ Variables: AppVariables }>();
 
 router.get("/me", async (c) => {
-  const userId = c.get("userId") as string;
-  const user = await clerk.users.getUser(userId);
+  const user = c.get("user");
   return c.json({
     id: user.id,
-    email: user.emailAddresses[0]?.emailAddress,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    imageUrl: user.imageUrl,
+    email: user.email,
+    firstName: user.user_metadata?.first_name,
+    lastName: user.user_metadata?.last_name,
+    imageUrl: user.user_metadata?.avatar_url,
   });
 });
 

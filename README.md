@@ -2,6 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Environment
+
+The Next.js app uses Supabase Auth. Configure these variables:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+The optional backend service validates Supabase bearer tokens with:
+
+```bash
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+FRONTEND_URL=http://localhost:3000
+```
+
 First, run the development server:
 
 ```bash

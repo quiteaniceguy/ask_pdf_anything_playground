@@ -4,8 +4,9 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { requireAuth } from "./middleware/auth.js";
 import userRoutes from "./routes/user.js";
+import type { AppVariables } from "./types.js";
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
 app.use("*", logger());
 app.use("*", cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:3000" }));
