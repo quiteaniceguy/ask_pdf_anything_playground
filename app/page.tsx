@@ -1,11 +1,15 @@
 "use client";
 import FileInput from "@/components/FileInput";
 import Wordmark from "@/components/Wordmark";
+import { UserButton } from "@clerk/nextjs";
 
 export default function Home() {
   return (
     <div>
-      <Wordmark />
+      <div className="flex items-center justify-between px-6 pt-4">
+        <Wordmark />
+        <UserButton />
+      </div>
       <h1 className="text-center text-4xl p-5">Figure Drawing Review</h1>
       <p className="text-center p-5">Upload your reference photo and your drawing to get feedback</p>
       <FileInput/>
