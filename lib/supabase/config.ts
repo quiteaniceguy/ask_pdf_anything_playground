@@ -3,10 +3,20 @@ export function getSupabaseConfig() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
+    return null;
+  }
+
+  return { url, anonKey };
+}
+
+export function requireSupabaseConfig() {
+  const config = getSupabaseConfig();
+
+  if (!config) {
     throw new Error(
       "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
     );
   }
 
-  return { url, anonKey };
+  return config;
 }

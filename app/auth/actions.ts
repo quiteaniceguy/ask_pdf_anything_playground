@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 import { redirect } from "next/navigation";
 
 type AuthState = {
@@ -16,6 +17,10 @@ export async function signIn(
   _prevState: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  if (!getSupabaseConfig()) {
+    return { error: "Supabase is not configured for this environment." };
+  }
+
   const email = getField(formData, "email");
   const password = getField(formData, "password");
   const supabase = await createClient();
@@ -33,6 +38,10 @@ export async function signUp(
   _prevState: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  if (!getSupabaseConfig()) {
+    return { error: "Supabase is not configured for this environment." };
+  }
+
   const email = getField(formData, "email");
   const password = getField(formData, "password");
   const supabase = await createClient();
@@ -47,6 +56,10 @@ export async function signUp(
 }
 
 export async function signOut() {
+  if (!getSupabaseConfig()) {
+    redirect("/");
+  }
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/sign-in");

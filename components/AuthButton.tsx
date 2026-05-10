@@ -1,8 +1,13 @@
 import { signOut } from "@/app/auth/actions";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
 export default async function AuthButton() {
+  if (!getSupabaseConfig()) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

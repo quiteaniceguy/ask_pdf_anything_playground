@@ -4,7 +4,13 @@ import { getSupabaseConfig } from "./config";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const { url, anonKey } = getSupabaseConfig();
+  const config = getSupabaseConfig();
+
+  if (!config) {
+    return { response, user: null, isConfigured: false };
+  }
+
+  const { url, anonKey } = config;
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {
@@ -25,5 +31,5 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { response, user };
+  return { response, user, isConfigured: true };
 }

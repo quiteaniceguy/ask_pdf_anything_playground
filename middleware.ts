@@ -4,11 +4,15 @@ import { NextResponse, type NextRequest } from "next/server";
 const publicRoutes = ["/sign-in", "/sign-up"];
 
 export default async function middleware(request: NextRequest) {
-  const { response, user } = await updateSession(request);
+  const { response, user, isConfigured } = await updateSession(request);
   const { pathname } = request.nextUrl;
   const isPublicRoute = publicRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
+
+  if (!isConfigured) {
+    return response;
+  }
 
   if (!user && !isPublicRoute) {
     if (pathname.startsWith("/api/")) {
