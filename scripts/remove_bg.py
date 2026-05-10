@@ -79,7 +79,7 @@ def remove_background(input_path, output_path):
     h, w     = img_rgb.shape[:2]
     img_bgr  = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
 
-    # ── 2. MediaPipe Hands: recover fingers BiRefNet clipped ──────────────────
+    # ── 2. MediaPipe Hands: recover fingers the model may clip ───────────────
     hands_mask = build_hand_mask(img_rgb, h, w)
 
     # ── 3. YOLO Pose: recover feet / ankles ──────────────────────────────────
@@ -89,7 +89,7 @@ def remove_background(input_path, output_path):
     pose_res   = pose_model(inf_bgr, verbose=False)[0]
     feet_mask  = build_foot_mask(pose_res, h, w, scale)
 
-    # ── 4. Merge extras only where they're adjacent to BiRefNet's mask ────────
+    # ── 4. Merge extras only where adjacent to the segmentation mask ─────────
     # This prevents spurious blobs in corners where MediaPipe fires incorrectly
     alpha_bin    = (alpha > 30).astype(np.uint8) * 255
     proximity_k  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (71, 71))
@@ -102,9 +102,17 @@ def remove_background(input_path, output_path):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ksize, ksize))
     alpha  = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, kernel)
 
+    # ── 5b. Guided-filter edge refinement ─────────────────────────────────────
+    # Uses the original RGB image as a guide to snap alpha edges to real pixel
+    # boundaries (hair strands, clothing edges) rather than blurry transitions.
+    guide  = img_rgb.astype(np.float32) / 255.0
+    alpha_f = alpha.astype(np.float32) / 255.0
+    alpha_f = cv2.ximgproc.guidedFilter(guide, alpha_f, radius=16, eps=1e-3)
+    alpha   = np.clip(alpha_f * 255, 0, 255).astype(np.uint8)
+
     # ── 6. Feathered edge ─────────────────────────────────────────────────────
-    blurred = cv2.GaussianBlur(alpha, (11, 11), 0)
-    inner   = cv2.erode(alpha, kernel, iterations=2)
+    blurred = cv2.GaussianBlur(alpha, (7, 7), 0)
+    inner   = cv2.erode(alpha, kernel, iterations=1)
     alpha   = np.where(inner > 200, 255, blurred).astype(np.uint8)
 
     Image.fromarray(np.dstack([img_rgb, alpha])).save(output_path, "PNG")
