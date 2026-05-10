@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
+import BodyPartSegmentation from "./BodyPartSegmentation";
 import LineCircleDrawing, { type LineCircleDrawingData } from "./LineCircleDrawing";
 
 function DropZone({
@@ -168,6 +169,7 @@ export default function FileInput() {
           )}
         </div>
       )}
+      {referenceResult && <BodyPartSegmentation image={referenceResult} />}
       {lineCircleDrawing && <LineCircleDrawing drawing={lineCircleDrawing} />}
     </div>
   );
