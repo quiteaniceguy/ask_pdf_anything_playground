@@ -20,6 +20,8 @@ from ultralytics import YOLO
 # MediaPipe hand landmark indices
 ALL_HAND_LMS  = list(range(21))
 FINGERTIP_IDS = [4, 8, 12, 16, 20]   # thumb → pinky tips
+REMBG_MODEL = "u2net_human_seg"
+REMBG_MAX_DIM = 768
 
 
 def build_hand_mask(img_rgb, h, w):
@@ -59,13 +61,21 @@ def build_foot_mask(pose_result, h, w, scale):
 
 
 def remove_background(input_path, output_path):
-    # ── 1. BiRefNet portrait: state-of-the-art human cutout ──────────────────
-    session  = new_session("birefnet-portrait", providers=["CPUExecutionProvider"])
+    # ── 1. Human segmentation cutout ─────────────────────────────────────────
+    session  = new_session(REMBG_MODEL, providers=["CPUExecutionProvider"])
     pil_in   = Image.open(input_path).convert("RGB")
-    pil_out  = remove(pil_in, session=session).convert("RGBA")
+    orig_w, orig_h = pil_in.size
+    scale = min(1.0, REMBG_MAX_DIM / max(orig_w, orig_h))
+    rembg_in = (
+        pil_in.resize((int(orig_w * scale), int(orig_h * scale)), Image.Resampling.LANCZOS)
+        if scale < 1.0
+        else pil_in
+    )
+    pil_out  = remove(rembg_in, session=session).convert("RGBA")
 
-    img_rgb  = np.array(pil_out)[:, :, :3]
-    alpha    = np.array(pil_out)[:, :, 3]
+    img_rgb  = np.array(pil_in)
+    alpha_small = Image.fromarray(np.array(pil_out)[:, :, 3])
+    alpha = np.array(alpha_small.resize((orig_w, orig_h), Image.Resampling.LANCZOS))
     h, w     = img_rgb.shape[:2]
     img_bgr  = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
 
