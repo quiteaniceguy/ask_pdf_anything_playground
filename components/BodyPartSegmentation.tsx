@@ -6,6 +6,10 @@ type BodyPartSegmentationProps = {
   image: string;
 };
 
+const MAX_SEGMENTATION_SIZE = 384;
+const MASK_OPACITY = 0.72;
+const MASK_BLUR_AMOUNT = 2;
+
 type BodySegmentationModule = {
   SupportedModels: { BodyPix: string };
   createSegmenter: (model: string, config: object) => Promise<{
@@ -49,7 +53,7 @@ async function getBodyPixSegmenter() {
     {
       architecture: "MobileNetV1",
       outputStride: 16,
-      multiplier: 0.75,
+      multiplier: 0.5,
       quantBytes: 2,
     },
   );
@@ -64,6 +68,26 @@ function loadImage(src: string) {
     image.onerror = () => reject(new Error("Body part segmentation image failed to load"));
     image.src = src;
   });
+}
+
+function resizeForSegmentation(image: HTMLImageElement) {
+  const sourceWidth = image.naturalWidth;
+  const sourceHeight = image.naturalHeight;
+  const largestSide = Math.max(sourceWidth, sourceHeight);
+  const scale = largestSide > MAX_SEGMENTATION_SIZE ? MAX_SEGMENTATION_SIZE / largestSide : 1;
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+
+  if (scale === 1) {
+    return image;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
+
+  return canvas;
 }
 
 export default function BodyPartSegmentation({ image }: BodyPartSegmentationProps) {
@@ -90,12 +114,13 @@ export default function BodyPartSegmentation({ image }: BodyPartSegmentationProp
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        canvas.width = imageElement.naturalWidth;
-        canvas.height = imageElement.naturalHeight;
+        const segmentationImage = resizeForSegmentation(imageElement);
+        canvas.width = segmentationImage.width;
+        canvas.height = segmentationImage.height;
 
         const segmentation = await (
           segmenter as Awaited<ReturnType<BodySegmentationModule["createSegmenter"]>>
-        ).segmentPeople(imageElement, {
+        ).segmentPeople(segmentationImage as HTMLImageElement, {
           multiSegmentation: false,
           segmentBodyParts: true,
         });
@@ -110,10 +135,10 @@ export default function BodyPartSegmentation({ image }: BodyPartSegmentationProp
 
         await bodySegmentation.drawMask(
           canvas,
-          imageElement,
+          segmentationImage as HTMLImageElement,
           coloredPartImage,
-          0.72,
-          0,
+          MASK_OPACITY,
+          MASK_BLUR_AMOUNT,
           false,
         );
 

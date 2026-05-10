@@ -89,18 +89,23 @@ export default function FileInput() {
       if (drawData.error) throw new Error(drawData.error);
       setReferenceResult(refData.image);
       setDrawingResult(drawData.image);
+      setLoading(false);
 
-      const lineCircleRes = await fetch("/api/line-circle", {
+      void fetch("/api/line-circle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: refData.image }),
-      });
-      const lineCircleData = await lineCircleRes.json();
-      if (lineCircleData.error) throw new Error(lineCircleData.error);
-      setLineCircleDrawing(lineCircleData.drawing);
+      })
+        .then((lineCircleRes) => lineCircleRes.json())
+        .then((lineCircleData) => {
+          if (lineCircleData.error) throw new Error(lineCircleData.error);
+          setLineCircleDrawing(lineCircleData.drawing);
+        })
+        .catch((lineCircleError: unknown) => {
+          setError(lineCircleError instanceof Error ? lineCircleError.message : "Line-circle drawing failed");
+        });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
       setLoading(false);
     }
   }
