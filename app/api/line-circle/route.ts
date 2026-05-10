@@ -25,6 +25,13 @@ type LineCircleResponse = {
   commands: LineCircleCommand[];
 };
 
+const CANVAS_SIZE = 800;
+const DEFAULT_MODEL = "gpt-5.5";
+const MIN_COMMANDS = 35;
+const MAX_COMMANDS = 120;
+
+export const maxDuration = 90;
+
 const lineCircleSchema = {
   type: "object",
   additionalProperties: false,
@@ -44,8 +51,8 @@ const lineCircleSchema = {
     },
     commands: {
       type: "array",
-      minItems: 1,
-      maxItems: 80,
+      minItems: MIN_COMMANDS,
+      maxItems: MAX_COMMANDS,
       items: {
         anyOf: [
           {
@@ -119,7 +126,13 @@ function isLineCircleResponse(value: unknown): value is LineCircleResponse {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<LineCircleResponse>;
   if (!Number.isInteger(candidate.width) || !Number.isInteger(candidate.height)) return false;
-  if (!Array.isArray(candidate.commands) || candidate.commands.length === 0) return false;
+  if (
+    !Array.isArray(candidate.commands) ||
+    candidate.commands.length < MIN_COMMANDS ||
+    candidate.commands.length > MAX_COMMANDS
+  ) {
+    return false;
+  }
 
   return candidate.commands.every((command) => {
     if (typeof command !== "object" || command === null || !("type" in command)) return false;
@@ -158,7 +171,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "OPENAI_API_KEY is not configured" }, { status: 500 });
   }
 
-  const model = process.env.OPENAI_LINE_CIRCLE_MODEL ?? "gpt-4o-mini";
+  const model = process.env.OPENAI_LINE_CIRCLE_MODEL ?? DEFAULT_MODEL;
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -168,14 +181,14 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({
       model,
       instructions:
-        "You convert figure images into simple drawing primitives. Use only line and circle commands. Capture pose, limb axes, head, torso, and major silhouette cues. Do not include text, colors, fills, curves, rectangles, paths, or polygons.",
+        "You are a life drawing instructor converting a figure photo into geometric drawing primitives. Use only line and circle commands, but make the result visibly match the specific pose in the image, not a generic stick figure. Preserve asymmetry, body lean, arm and leg angles, negative spaces, and silhouette landmarks. Use many short contour and gesture lines plus joint circles. Coordinates must be on an 800 by 800 canvas with the full figure centered and scaled to fit. Avoid perfect symmetry unless the photo is symmetric. Do not include text, colors, fills, curves, rectangles, paths, or polygons.",
       input: [
         {
           role: "user",
           content: [
             {
               type: "input_text",
-              text: "Recreate this processed figure image as a sparse line-and-circle drawing on an 800 by 800 canvas. Return JSON only.",
+              text: `Study the exact pose in this background-removed figure. Return ${MIN_COMMANDS}-${MAX_COMMANDS} line/circle commands on a ${CANVAS_SIZE} by ${CANVAS_SIZE} canvas. Include the head, neck, shoulder line, torso centerline, outer torso contours, both upper arms, both lower arms, hands, pelvis, both thighs, both shins, both feet, and several silhouette contour cues. Return JSON only.`,
             },
             {
               type: "input_image",
