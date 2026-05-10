@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({
       model,
       instructions:
-        "You are a life drawing instructor converting a figure photo into geometric drawing primitives. Use only line and circle commands, but make the result visibly match the specific pose in the image, not a generic stick figure. Preserve asymmetry, body lean, arm and leg angles, negative spaces, and silhouette landmarks. Use many short contour and gesture lines plus joint circles. Coordinates must be on an 800 by 800 canvas with the full figure centered and scaled to fit. Avoid perfect symmetry unless the photo is symmetric. Do not include text, colors, fills, curves, rectangles, paths, or polygons.",
+        "You are a life drawing instructor converting a figure photo into geometric drawing primitives. Use only line and circle commands, but make the result visibly match the specific pose in the image, not a generic stick figure. Preserve asymmetry, body lean, arm and leg angles, negative spaces, and silhouette landmarks. Use many short contour and gesture lines plus joint circles. Add a little bit more detail than a stick figure: include key anatomical landmarks, overlapping limb edges, hands, feet, and small silhouette cues where they help the pose read clearly. Coordinates must be on an 800 by 800 canvas with the full figure centered and scaled to fit. Avoid perfect symmetry unless the photo is symmetric. Do not include text, colors, fills, curves, rectangles, paths, or polygons.",
       input: [
         {
           role: "user",
