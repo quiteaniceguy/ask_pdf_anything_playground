@@ -17,7 +17,19 @@ type CircleCommand = {
   strokeWidth?: number;
 };
 
-type LineCircleCommand = LineCommand | CircleCommand;
+type PolygonPoint = {
+  x: number;
+  y: number;
+};
+
+type PolygonCommand = {
+  type: "polygon";
+  points: PolygonPoint[];
+  strokeWidth?: number;
+  fillOpacity?: number;
+};
+
+type LineCircleCommand = LineCommand | CircleCommand | PolygonCommand;
 
 type LineCircleResponse = {
   width: number;
@@ -78,6 +90,30 @@ const lineCircleSchema = {
               cy: { type: "number" },
               r: { type: "number", minimum: 1 },
               strokeWidth: { type: "number", minimum: 1, maximum: 16 },
+            },
+          },
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["type", "points", "strokeWidth", "fillOpacity"],
+            properties: {
+              type: { type: "string", enum: ["polygon"] },
+              points: {
+                type: "array",
+                minItems: 3,
+                maxItems: 16,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["x", "y"],
+                  properties: {
+                    x: { type: "number" },
+                    y: { type: "number" },
+                  },
+                },
+              },
+              strokeWidth: { type: "number", minimum: 1, maximum: 16 },
+              fillOpacity: { type: "number", minimum: 0, maximum: 0.35 },
             },
           },
         ],
@@ -155,6 +191,22 @@ function isLineCircleResponse(value: unknown): value is LineCircleResponse {
       );
     }
 
+    if (command.type === "polygon") {
+      return (
+        Array.isArray(command.points) &&
+        command.points.length >= 3 &&
+        command.points.length <= 16 &&
+        command.points.every((point) => (
+          typeof point === "object" &&
+          point !== null &&
+          isNumber(point.x) &&
+          isNumber(point.y)
+        )) &&
+        (command.strokeWidth === undefined || isNumber(command.strokeWidth)) &&
+        (command.fillOpacity === undefined || isNumber(command.fillOpacity))
+      );
+    }
+
     return false;
   });
 }
@@ -181,14 +233,14 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({
       model,
       instructions:
-        "You are a life drawing instructor converting a figure photo into geometric drawing primitives. Use only line and circle commands, but make the result visibly match the specific pose in the image, not a generic stick figure. Preserve asymmetry, body lean, arm and leg angles, negative spaces, and silhouette landmarks. Use many short contour and gesture lines plus joint circles. Add a little bit more detail than a stick figure: include key anatomical landmarks, overlapping limb edges, hands, feet, and small silhouette cues where they help the pose read clearly. Coordinates must be on an 800 by 800 canvas with the full figure centered and scaled to fit. Avoid perfect symmetry unless the photo is symmetric. Do not include text, colors, fills, curves, rectangles, paths, or polygons.",
+        "You are a life drawing instructor converting a figure photo into geometric drawing primitives. Use line, circle, and polygon commands, and make the result visibly match the specific pose in the image, not a generic stick figure. Use polygons for major body masses and silhouette planes such as the rib cage, pelvis, upper arms, forearms, thighs, shins, hands, and feet. Use lines for gesture axes, contours, and limb direction. Use circles for joints and important landmarks. Preserve asymmetry, body lean, arm and leg angles, negative spaces, and silhouette landmarks. Add enough detail for the pose to read clearly. Coordinates must be on an 800 by 800 canvas with the full figure centered and scaled to fit. Avoid perfect symmetry unless the photo is symmetric. Do not include text, colors, curves, rectangles, or paths.",
       input: [
         {
           role: "user",
           content: [
             {
               type: "input_text",
-              text: `Study the exact pose in this background-removed figure. Return ${MIN_COMMANDS}-${MAX_COMMANDS} line/circle commands on a ${CANVAS_SIZE} by ${CANVAS_SIZE} canvas. Include the head, neck, shoulder line, torso centerline, outer torso contours, both upper arms, both lower arms, hands, pelvis, both thighs, both shins, both feet, and several silhouette contour cues. Return JSON only.`,
+              text: `Study the exact pose in this background-removed figure. Return ${MIN_COMMANDS}-${MAX_COMMANDS} line/circle/polygon commands on a ${CANVAS_SIZE} by ${CANVAS_SIZE} canvas. Use polygons for broad body shapes and limb planes, not just lines. Include the head, neck, shoulder line, torso centerline, outer torso contours, rib cage, pelvis, both upper arms, both lower arms, hands, both thighs, both shins, both feet, and several silhouette contour cues. Return JSON only.`,
             },
             {
               type: "input_image",
@@ -201,7 +253,7 @@ export async function POST(request: NextRequest) {
       text: {
         format: {
           type: "json_schema",
-          name: "line_circle_drawing",
+          name: "line_circle_polygon_drawing",
           strict: true,
           schema: lineCircleSchema,
         },
