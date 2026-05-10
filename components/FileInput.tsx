@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
+import LineCircleDrawing, { type LineCircleDrawingData } from "./LineCircleDrawing";
 
 function DropZone({
   label,
@@ -50,6 +51,7 @@ export default function FileInput() {
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
   const [referenceResult, setReferenceResult] = useState<string | null>(null);
   const [drawingResult, setDrawingResult] = useState<string | null>(null);
+  const [lineCircleDrawing, setLineCircleDrawing] = useState<LineCircleDrawingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +69,7 @@ export default function FileInput() {
     if (!reference || !drawing) return;
     setReferenceResult(null);
     setDrawingResult(null);
+    setLineCircleDrawing(null);
     setError(null);
     setLoading(true);
     try {
@@ -85,6 +88,15 @@ export default function FileInput() {
       if (drawData.error) throw new Error(drawData.error);
       setReferenceResult(refData.image);
       setDrawingResult(drawData.image);
+
+      const lineCircleRes = await fetch("/api/line-circle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: refData.image }),
+      });
+      const lineCircleData = await lineCircleRes.json();
+      if (lineCircleData.error) throw new Error(lineCircleData.error);
+      setLineCircleDrawing(lineCircleData.drawing);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -156,6 +168,7 @@ export default function FileInput() {
           )}
         </div>
       )}
+      {lineCircleDrawing && <LineCircleDrawing drawing={lineCircleDrawing} />}
     </div>
   );
 }
