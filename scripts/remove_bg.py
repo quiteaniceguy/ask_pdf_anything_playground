@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 import os
-import io
 import types
 
 os.environ.setdefault("YOLO_AUTOINSTALL", "false")
@@ -18,10 +17,9 @@ from rembg import remove, new_session
 from ultralytics import YOLO
 
 # MediaPipe hand landmark indices
-ALL_HAND_LMS  = list(range(21))
 FINGERTIP_IDS = [4, 8, 12, 16, 20]   # thumb → pinky tips
-REMBG_MODEL = "u2net_human_seg"
-REMBG_MAX_DIM = 768
+REMBG_MODEL = "isnet-general-use"
+REMBG_MAX_DIM = 900
 
 
 def build_hand_mask(img_rgb, h, w):
@@ -60,8 +58,31 @@ def build_foot_mask(pose_result, h, w, scale):
     return mask
 
 
+def clean_alpha(alpha):
+    """Keep the cutout crisp while removing small holes and edge speckles."""
+    alpha = np.where(alpha >= 248, 255, alpha)
+    alpha = np.where(alpha <= 6, 0, alpha).astype(np.uint8)
+
+    h, w = alpha.shape
+    close_size = max(int(min(w, h) * 0.003), 3)
+    if close_size % 2 == 0:
+        close_size += 1
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (close_size, close_size))
+    alpha = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, close_kernel)
+
+    hard = (alpha > 24).astype(np.uint8) * 255
+    edge_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    edge_band = cv2.dilate(hard, edge_kernel) - cv2.erode(hard, edge_kernel)
+    blurred = cv2.GaussianBlur(alpha, (3, 3), 0)
+    alpha = np.where(edge_band > 0, blurred, alpha)
+
+    solid = cv2.erode((alpha > 230).astype(np.uint8) * 255, edge_kernel)
+    alpha = np.where(solid > 0, 255, alpha)
+    return alpha.astype(np.uint8)
+
+
 def remove_background(input_path, output_path):
-    # ── 1. Human segmentation cutout ─────────────────────────────────────────
+    # ── 1. Figure segmentation cutout ────────────────────────────────────────
     session  = new_session(REMBG_MODEL, providers=["CPUExecutionProvider"])
     pil_in   = Image.open(input_path).convert("RGB")
     orig_w, orig_h = pil_in.size
@@ -97,23 +118,8 @@ def remove_background(input_path, output_path):
     alpha = np.maximum(alpha, hands_mask & (near_body > 0))
     alpha = np.maximum(alpha, feet_mask  & (near_body > 0))
 
-    # ── 5. Light close to fill micro-gaps at merged boundaries ───────────────
-    ksize  = max(int(min(w, h) * 0.005), 5)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ksize, ksize))
-    alpha  = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, kernel)
-
-    # ── 5b. Guided-filter edge refinement ─────────────────────────────────────
-    # Uses the original RGB image as a guide to snap alpha edges to real pixel
-    # boundaries (hair strands, clothing edges) rather than blurry transitions.
-    guide  = img_rgb.astype(np.float32) / 255.0
-    alpha_f = alpha.astype(np.float32) / 255.0
-    alpha_f = cv2.ximgproc.guidedFilter(guide, alpha_f, radius=16, eps=1e-3)
-    alpha   = np.clip(alpha_f * 255, 0, 255).astype(np.uint8)
-
-    # ── 6. Feathered edge ─────────────────────────────────────────────────────
-    blurred = cv2.GaussianBlur(alpha, (7, 7), 0)
-    inner   = cv2.erode(alpha, kernel, iterations=1)
-    alpha   = np.where(inner > 200, 255, blurred).astype(np.uint8)
+    # ── 5. Local alpha cleanup ───────────────────────────────────────────────
+    alpha = clean_alpha(alpha)
 
     Image.fromarray(np.dstack([img_rgb, alpha])).save(output_path, "PNG")
 
