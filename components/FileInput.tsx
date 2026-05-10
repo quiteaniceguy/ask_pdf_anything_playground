@@ -48,7 +48,8 @@ export default function FileInput() {
   const [drawing, setDrawing] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [referenceResult, setReferenceResult] = useState<string | null>(null);
+  const [drawingResult, setDrawingResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,16 +65,26 @@ export default function FileInput() {
 
   async function handleSubmit() {
     if (!reference || !drawing) return;
-    setResult(null);
+    setReferenceResult(null);
+    setDrawingResult(null);
     setError(null);
     setLoading(true);
     try {
-      const form = new FormData();
-      form.append("image", reference);
-      const res = await fetch("/api/remove-bg", { method: "POST", body: form });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setResult(data.image);
+      const [refRes, drawRes] = await Promise.all([
+        fetch("/api/remove-bg", {
+          method: "POST",
+          body: (() => { const f = new FormData(); f.append("image", reference); return f; })(),
+        }),
+        fetch("/api/remove-bg", {
+          method: "POST",
+          body: (() => { const f = new FormData(); f.append("image", drawing); return f; })(),
+        }),
+      ]);
+      const [refData, drawData] = await Promise.all([refRes.json(), drawRes.json()]);
+      if (refData.error) throw new Error(refData.error);
+      if (drawData.error) throw new Error(drawData.error);
+      setReferenceResult(refData.image);
+      setDrawingResult(drawData.image);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -109,20 +120,40 @@ export default function FileInput() {
       </button>
 
       {error && <p className="text-red-500">{error}</p>}
-      {result && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-gray-600 text-sm">Reference (background removed)</p>
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{
-              backgroundImage:
-                "linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)",
-              backgroundSize: "20px 20px",
-              backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-            }}
-          >
-            <img src={result} alt="Reference with background removed" className="max-h-96" />
-          </div>
+      {(referenceResult || drawingResult) && (
+        <div className="grid grid-cols-2 gap-6 w-full">
+          {referenceResult && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-gray-600 text-sm">Reference (background removed)</p>
+              <div
+                className="rounded-lg overflow-hidden w-full"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)",
+                  backgroundSize: "20px 20px",
+                  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                }}
+              >
+                <img src={referenceResult} alt="Reference with background removed" className="max-h-96 mx-auto" />
+              </div>
+            </div>
+          )}
+          {drawingResult && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-gray-600 text-sm">Drawing (background removed)</p>
+              <div
+                className="rounded-lg overflow-hidden w-full"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)",
+                  backgroundSize: "20px 20px",
+                  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                }}
+              >
+                <img src={drawingResult} alt="Drawing with background removed" className="max-h-96 mx-auto" />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
